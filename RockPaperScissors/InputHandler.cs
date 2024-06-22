@@ -24,15 +24,26 @@ namespace RockPaperScissors
                 {
                     _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
                 }
+                if (currentKeyboardState.IsKeyDown(Keys.Right) && _gameStateManager.Level >= 2)
+                {
+                    _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
+                }
+                if (currentKeyboardState.IsKeyDown(Keys.Enter))
+                {
+                    _gameStateManager.CurrentState = GameState.Playing;
+                }
                 UpdateTitleScreen(currentMouseState);
             }
             else if (_gameStateManager.CurrentState == GameState.Playing)
             {
                 UpdatePlayingScreen(currentMouseState);
+                CheckForExitButtonClick(currentMouseState, GameState.Title);
             }
             else if (_gameStateManager.CurrentState == GameState.Result)
             {
                 UpdateResultScreen(currentMouseState);
+                CheckForExitButtonClick(currentMouseState, GameState.Title);
+
             }
             else if (_gameStateManager.CurrentState == GameState.LS_Title)
             {
@@ -40,18 +51,38 @@ namespace RockPaperScissors
                 {
                     _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
                 }
+                if (currentKeyboardState.IsKeyDown(Keys.Left))
+                {
+                    _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
+                }
+                if (currentKeyboardState.IsKeyDown(Keys.Enter))
+                {
+                    _gameStateManager.CurrentState = GameState.LS_Playing;
+                }
                 UpdateLSTitleScreen(currentMouseState);
             }
             else if (_gameStateManager.CurrentState == GameState.LS_Playing)
             {
                 UpdateLSPlayingScreen(currentMouseState);
+                CheckForExitButtonClick(currentMouseState, GameState.LS_Title);
+
             }
             else if (_gameStateManager.CurrentState == GameState.LS_Result)
             {
                 UpdateLSResultScreen(currentMouseState);
+                CheckForExitButtonClick(currentMouseState, GameState.LS_Title);
+
             }
 
             _previousMouseState = currentMouseState;
+        }
+
+        private void CheckForExitButtonClick(MouseState currentMouseState, GameState state)
+        {
+            if (_gameStateManager.ExitButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+            {
+                _gameStateManager.CurrentState = state;
+            }
         }
 
         private void UpdateTitleScreen(MouseState currentMouseState)
@@ -78,6 +109,10 @@ namespace RockPaperScissors
             if (_gameStateManager.StartButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
                 _gameStateManager.CurrentState = GameState.Playing;
+            }
+            if (_gameStateManager.Level >= 2)
+            {
+                CheckForNextButtonClick(currentMouseState);
             }
         }
         private void UpdateLSTitleScreen(MouseState currentMouseState)
@@ -108,6 +143,10 @@ namespace RockPaperScissors
             if (_gameStateManager.StartButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
                 _gameStateManager.CurrentState = GameState.LS_Playing;
+            }
+            if (_gameStateManager.Level >= 2)
+            {
+                CheckForPrevButtonClick(currentMouseState);
             }
         }
 
@@ -204,6 +243,22 @@ namespace RockPaperScissors
             {
                 _gameLogic.ResetRound();
                 _gameStateManager.CurrentState = GameState.LS_Playing;
+            }
+        }
+
+        private void CheckForNextButtonClick(MouseState currentMouseState)
+        {
+            if (_gameStateManager.NextButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+            {
+                _gameStateManager.CurrentState = GameState.LS_Title;
+            }
+        }
+
+        private void CheckForPrevButtonClick(MouseState currentMouseState)
+        {
+            if (_gameStateManager.PrevButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+            {
+                _gameStateManager.CurrentState = GameState.Title;
             }
         }
 

@@ -51,10 +51,15 @@ namespace RockPaperScissors
 
             DrawTextures(_gameStateManager.Textures, positions);
 
-            _spriteBatch.Draw(_gameStateManager.StartButtonTexture, _gameStateManager.StartButtonPosition, null, Color.White, 0f, new Vector2(_gameStateManager.StartButtonTexture.Width / 2, _gameStateManager.StartButtonTexture.Height / 2), _gameStateManager.ButtonScale, SpriteEffects.None, 0f);
+            // _spriteBatch.Draw(_gameStateManager.StartButtonTexture, _gameStateManager.StartButtonPosition, null, Color.White, 0f, new Vector2(_gameStateManager.StartButtonTexture.Width / 2, _gameStateManager.StartButtonTexture.Height / 2), _gameStateManager.ButtonScale, SpriteEffects.None, 0f);
 
-            Vector2 textSize = _gameStateManager.Font.MeasureString("Start");
-            _spriteBatch.DrawString(_gameStateManager.Font, "Start", _gameStateManager.StartButtonPosition - textSize / 2, Color.Black);
+            Vector2 textSize = _gameStateManager.Font.MeasureString("Press ENTER to Start...");
+            _spriteBatch.DrawString(_gameStateManager.Font, "Press ENTER to Start...", _gameStateManager.StartButtonPosition - textSize / 2, Color.Black);
+
+            if (_gameStateManager.Level >= 2)
+            {
+                DrawNextButton();
+            }
 
             DrawPlayerInfo();
         }
@@ -67,10 +72,15 @@ namespace RockPaperScissors
 
             DrawTextures(_gameStateManager.LSTextures, positions);
 
-            _spriteBatch.Draw(_gameStateManager.StartButtonTexture, _gameStateManager.StartButtonPosition, null, Color.White, 0f, new Vector2(_gameStateManager.StartButtonTexture.Width / 2, _gameStateManager.StartButtonTexture.Height / 2), _gameStateManager.ButtonScale, SpriteEffects.None, 0f);
+            // _spriteBatch.Draw(_gameStateManager.StartButtonTexture, _gameStateManager.StartButtonPosition, null, Color.White, 0f, new Vector2(_gameStateManager.StartButtonTexture.Width / 2, _gameStateManager.StartButtonTexture.Height / 2), _gameStateManager.ButtonScale, SpriteEffects.None, 0f);
 
-            Vector2 textSize = _gameStateManager.Font.MeasureString("Start");
-            _spriteBatch.DrawString(_gameStateManager.Font, "Start", _gameStateManager.StartButtonPosition - textSize / 2, Color.Black);
+            Vector2 textSize = _gameStateManager.Font.MeasureString("Press ENTER to Start...");
+            _spriteBatch.DrawString(_gameStateManager.Font, "Press ENTER to Start...", _gameStateManager.StartButtonPosition - textSize / 2, Color.Black);
+
+            if (_gameStateManager.Level >= 2)
+            {
+                DrawPrevButton();
+            }
 
             DrawPlayerInfo();
         }
@@ -80,6 +90,7 @@ namespace RockPaperScissors
             var positions = _gameStateManager.Positions[GameState.Playing];
             DrawTextures(_gameStateManager.Textures, positions);
             DrawPlayerInfo();
+            DrawExitButton();
         }
 
         private void DrawLSPlayingScreen()
@@ -87,6 +98,7 @@ namespace RockPaperScissors
             var positions = _gameStateManager.Positions[GameState.LS_Playing];
             DrawTextures(_gameStateManager.LSTextures, positions);
             DrawPlayerInfo();
+            DrawExitButton();
         }
 
         private void DrawResultScreen()
@@ -137,6 +149,7 @@ namespace RockPaperScissors
             _spriteBatch.DrawString(_gameStateManager.Font, "Play Again", _gameStateManager.StartButtonPosition - textSize / 2, Color.Black);
 
             DrawPlayerInfo();
+            DrawExitButton();
         }
 
         private void DrawTextures<T>(Dictionary<T, Texture2D> textures, Dictionary<string, Vector2> positions)
@@ -159,6 +172,45 @@ namespace RockPaperScissors
             if (choice.Equals(LS_Choice.Lizard) && _gameStateManager.IsHoveringLizard) return _gameStateManager.HoverScale;
             if (choice.Equals(LS_Choice.Spock) && _gameStateManager.IsHoveringSpock) return _gameStateManager.HoverScale;
             return _gameStateManager.NormalScale;
+        }
+
+        private void DrawExitButton()
+        {
+            _gameStateManager.ExitButtonRectangle = new Rectangle(
+                (int)(_gameStateManager.ExitButtonPosition.X - _gameStateManager.ExitButtonTexture.Width / 2),
+                (int)(_gameStateManager.ExitButtonPosition.Y - _gameStateManager.ExitButtonTexture.Height / 2),
+                _gameStateManager.ExitButtonTexture.Width,
+                _gameStateManager.ExitButtonTexture.Height
+            );
+
+            _spriteBatch.Draw(_gameStateManager.ExitButtonTexture, _gameStateManager.ExitButtonPosition, null, Color.White, 0f, new Vector2(_gameStateManager.ExitButtonTexture.Width / 2, _gameStateManager.ExitButtonTexture.Height / 2), 1f, SpriteEffects.None, 0f);
+
+            Vector2 textSize = _gameStateManager.Font.MeasureString("Exit");
+            _spriteBatch.DrawString(_gameStateManager.Font, "Exit", _gameStateManager.ExitButtonPosition - textSize / 2, Color.Black);
+        }
+
+        private void DrawNextButton()
+        {
+            _gameStateManager.NextButtonRectangle = new Rectangle(
+                (int)(_gameStateManager.NextButtonPosition.X - _gameStateManager.NextButtonTexture.Width / 2),
+                (int)(_gameStateManager.NextButtonPosition.Y - _gameStateManager.NextButtonTexture.Height / 2),
+                _gameStateManager.NextButtonTexture.Width,
+                _gameStateManager.NextButtonTexture.Height
+            );
+
+            _spriteBatch.Draw(_gameStateManager.NextButtonTexture, _gameStateManager.NextButtonPosition, null, Color.White, 0f, new Vector2(_gameStateManager.NextButtonTexture.Width / 2, _gameStateManager.NextButtonTexture.Height / 2), 1f, SpriteEffects.None, 0f);
+        }
+
+        private void DrawPrevButton()
+        {
+            _gameStateManager.PrevButtonRectangle = new Rectangle(
+                (int)(_gameStateManager.PrevButtonPosition.X - _gameStateManager.PrevButtonTexture.Width / 2),
+                (int)(_gameStateManager.PrevButtonPosition.Y - _gameStateManager.PrevButtonTexture.Height / 2),
+                _gameStateManager.PrevButtonTexture.Width,
+                _gameStateManager.PrevButtonTexture.Height
+            );
+
+            _spriteBatch.Draw(_gameStateManager.PrevButtonTexture, _gameStateManager.PrevButtonPosition, null, Color.White, 0f, new Vector2(_gameStateManager.PrevButtonTexture.Width / 2, _gameStateManager.PrevButtonTexture.Height / 2), 1f, SpriteEffects.None, 0f);
         }
 
         private void DrawPlayerInfo()

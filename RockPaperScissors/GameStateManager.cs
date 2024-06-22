@@ -49,11 +49,24 @@ namespace RockPaperScissors
         public Texture2D StartButtonTexture { get; private set; }
         public SpriteFont Font { get; private set; }
 
+        public Texture2D ExitButtonTexture { get; private set; }
+        public Vector2 ExitButtonPosition { get; set; }
+        public Rectangle ExitButtonRectangle { get; set; }
+
         // Level System
         public int Level { get; set; } = 1;
         public int XP { get; set; } = 0;
         public int XPNeeded => Level * 100; // XP needed to level up
         public int WinStreak { get; set; } = 0;
+
+
+
+        public Texture2D NextButtonTexture { get; private set; }
+        public Texture2D PrevButtonTexture { get; private set; }
+        public Vector2 NextButtonPosition { get; set; }
+        public Vector2 PrevButtonPosition { get; set; }
+        public Rectangle NextButtonRectangle { get; set; }
+        public Rectangle PrevButtonRectangle { get; set; }
 
 
         public void LoadContent(ContentManager content, GraphicsDevice graphicsDevice)
@@ -68,10 +81,19 @@ namespace RockPaperScissors
 
 
             StartButtonTexture = content.Load<Texture2D>("startButton");
+            ExitButtonTexture = content.Load<Texture2D>("startButton"); // Load the exit button texture
+
+            NextButtonTexture = content.Load<Texture2D>("nextButton");
+            PrevButtonTexture = content.Load<Texture2D>("prevButton");
+
             Font = content.Load<SpriteFont>("File");
 
             int windowWidth = graphicsDevice.Viewport.Width;
             int windowHeight = graphicsDevice.Viewport.Height;
+
+            NextButtonPosition = new Vector2(windowWidth - NextButtonTexture.Width / 2 - 10, windowHeight / 2);
+            PrevButtonPosition = new Vector2(PrevButtonTexture.Width / 2 + 10, windowHeight / 2);
+
 
             Positions = new Dictionary<GameState, Dictionary<string, Vector2>>()
             {
@@ -132,6 +154,8 @@ namespace RockPaperScissors
             };
 
             StartButtonPosition = new Vector2(windowWidth / 2, 7 * windowHeight / 8);
+            ExitButtonPosition = new Vector2(windowWidth - ExitButtonTexture.Width / 2 - 10, windowHeight - ExitButtonTexture.Height / 2 - 10); // Position it at the bottom right corner with some padding
+
 
             // Load saved data
             LoadGameData();
