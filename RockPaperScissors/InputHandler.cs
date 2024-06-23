@@ -45,12 +45,14 @@ namespace RockPaperScissors
                 if (currentKeyboardState.IsKeyDown(Keys.LeftControl) && currentKeyboardState.IsKeyDown(Keys.LeftShift) && currentKeyboardState.IsKeyDown(Keys.L))
                 {
                     _gameStateManager.NextModeSound.Play();
-                    _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
+                    _gameStateManager.IsTransitioning = true;
+                    // _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
                 }
                 if (currentKeyboardState.IsKeyDown(Keys.Right) && _gameStateManager.Level >= 2)
                 {
                     _gameStateManager.NextModeSound.Play();
-                    _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
+                    _gameStateManager.IsTransitioning = true;
+                    // _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
                 }
                 if (currentKeyboardState.IsKeyDown(Keys.Enter))
                 {
@@ -84,12 +86,16 @@ namespace RockPaperScissors
                 if (currentKeyboardState.IsKeyDown(Keys.LeftControl) && currentKeyboardState.IsKeyDown(Keys.LeftShift) && currentKeyboardState.IsKeyDown(Keys.S))
                 {
                     _gameStateManager.NextModeSound.Play();
-                    _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
+                    _gameStateManager.IsTransitioning = true;
+
+                    // _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
                 }
                 if (currentKeyboardState.IsKeyDown(Keys.Left))
                 {
                     _gameStateManager.NextModeSound.Play();
-                    _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
+                    _gameStateManager.IsTransitioning = true;
+
+                    // _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
                 }
                 if (currentKeyboardState.IsKeyDown(Keys.Enter))
                 {
@@ -373,7 +379,9 @@ namespace RockPaperScissors
             if (_gameStateManager.NextButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
                 _gameStateManager.NextModeSound.Play();
-                _gameStateManager.CurrentState = GameState.LS_Title;
+                _gameStateManager.IsTransitioning = true;
+
+                //_gameStateManager.CurrentState = GameState.LS_Title;
             }
         }
 
@@ -382,7 +390,9 @@ namespace RockPaperScissors
             if (_gameStateManager.PrevButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
                 _gameStateManager.NextModeSound.Play();
-                _gameStateManager.CurrentState = GameState.Title;
+                _gameStateManager.IsTransitioning = true;
+
+                // _gameStateManager.CurrentState = GameState.Title;
             }
         }
 

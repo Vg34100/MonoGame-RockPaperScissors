@@ -122,12 +122,14 @@ namespace RockPaperScissors
             if (_gameStateManager.PlayerLSChoice == _gameStateManager.ComputerLSChoice)
             {
                 _gameStateManager.ResultMessage = "It's a tie!";
+                _gameStateManager.LoseSound.Play();
                 _gameStateManager.WinStreak = 0;
                 _gameStateManager.OverallTies++;
             }
             else if (_lsWinConditions[_gameStateManager.PlayerLSChoice].Contains(_gameStateManager.ComputerLSChoice))
             {
                 _gameStateManager.ResultMessage = "You win!";
+                _gameStateManager.WinSound.Play();
                 _gameStateManager.WinStreak++;
                 _gameStateManager.IncrementLSWinCount(_gameStateManager.PlayerLSChoice);
                 _gameStateManager.GainXP(20 * _gameStateManager.WinStreak); // Gain 20 XP for a win
@@ -138,6 +140,7 @@ namespace RockPaperScissors
             else
             {
                 _gameStateManager.ResultMessage = "You lose!";
+                _gameStateManager.LoseSound.Play();
                 _gameStateManager.WinStreak = 0;
                 _gameStateManager.OverallLoses++;
 

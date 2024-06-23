@@ -41,15 +41,27 @@ namespace RockPaperScissors
 
         protected override void Update(GameTime gameTime)
         {
-            // if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-            //   Exit();
-
-            _inputHandler.Update(Mouse.GetState(), Keyboard.GetState(), gameTime);
-            _gameLogic.Update(gameTime);
-            _gameStateManager.AchievementManager.Update(gameTime); // Update the achievement manager
+            if (_gameStateManager.IsTransitioning)
+            {
+                _gameStateManager.TransitionProgress += (float)gameTime.ElapsedGameTime.TotalSeconds * GameStateManager.TransitionSpeed;
+                if (_gameStateManager.TransitionProgress >= 1f)
+                {
+                    _gameStateManager.TransitionProgress = 0f;
+                    _gameStateManager.IsTransitioning = false;
+                    // Switch to the next state
+                    _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
+                }
+            }
+            else
+            {
+                _inputHandler.Update(Mouse.GetState(), Keyboard.GetState(), gameTime);
+                _gameLogic.Update(gameTime);
+                _gameStateManager.AchievementManager.Update(gameTime);
+            }
 
             base.Update(gameTime);
         }
+
 
         protected override void Draw(GameTime gameTime)
         {

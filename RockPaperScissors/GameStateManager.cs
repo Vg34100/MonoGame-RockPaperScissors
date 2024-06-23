@@ -97,6 +97,14 @@ namespace RockPaperScissors
         public Rectangle NextButtonRectangle { get; set; }
         public Rectangle PrevButtonRectangle { get; set; }
 
+
+
+        public bool IsTransitioning { get; set; }
+        public float TransitionProgress { get; set; }
+        public const float TransitionSpeed = 2f; // Adjust the speed of the transition as needed
+
+
+
         public GameStateManager()
         {
             InitializeDictionaries();

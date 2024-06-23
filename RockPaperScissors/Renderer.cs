@@ -19,38 +19,45 @@ namespace RockPaperScissors
 
         public void Draw(GameTime gameTime)
         {
-            if (_gameStateManager.CurrentState == GameState.Title)
+            if (_gameStateManager.IsTransitioning)
             {
-                DrawTitleScreen();
+                DrawTransitionScreen();
             }
-            else if (_gameStateManager.CurrentState == GameState.Playing)
+            else
             {
-                DrawPlayingScreen();
-            }
-            else if (_gameStateManager.CurrentState == GameState.Result)
-            {
-                DrawResultScreen();
-            }
-            else if (_gameStateManager.CurrentState == GameState.LS_Title)
-            {
-                DrawLSTitleScreen();
-            }
-            else if (_gameStateManager.CurrentState == GameState.LS_Playing)
-            {
-                DrawLSPlayingScreen();
-            }
-            else if (_gameStateManager.CurrentState == GameState.LS_Result)
-            {
-                DrawLSResultScreen();
-            }
-            else if (_gameStateManager.CurrentState == GameState.Achievements)
-            {
-                DrawAchievementsScreen();
+                if (_gameStateManager.CurrentState == GameState.Title)
+                {
+                    DrawTitleScreen();
+                }
+                else if (_gameStateManager.CurrentState == GameState.LS_Title)
+                {
+                    DrawLSTitleScreen();
+                }
+                else if (_gameStateManager.CurrentState == GameState.Playing)
+                {
+                    DrawPlayingScreen();
+                }
+                else if (_gameStateManager.CurrentState == GameState.LS_Playing)
+                {
+                    DrawLSPlayingScreen();
+                }
+                else if (_gameStateManager.CurrentState == GameState.Result)
+                {
+                    DrawResultScreen();
+                }
+                else if (_gameStateManager.CurrentState == GameState.LS_Result)
+                {
+                    DrawLSResultScreen();
+                }
+                else if (_gameStateManager.CurrentState == GameState.Achievements)
+                {
+                    DrawAchievementsScreen();
+                }
             }
 
-            DrawResetMessage(gameTime); // Draw the reset message if needed
-
+            DrawResetMessage(gameTime);
         }
+
 
         private void DrawResetMessage(GameTime gameTime)
         {
@@ -63,6 +70,63 @@ namespace RockPaperScissors
                 _gameStateManager.UpdateResetMessageTimer(gameTime); // Update the timer
             }
         }
+
+        private void DrawTransitionScreen()
+        {
+            float offset = _gameStateManager.TransitionProgress * _spriteBatch.GraphicsDevice.Viewport.Width;
+
+            var positionsTitle = _gameStateManager.Positions[GameState.Title];
+            var positionsLSTitle = _gameStateManager.Positions[GameState.LS_Title];
+
+            if (_gameStateManager.CurrentState == GameState.Title)
+            {
+                // Transition from Title to LS_Title
+                DrawTransitionItems(positionsTitle, -offset, true);
+                DrawTransitionItems(positionsLSTitle, _spriteBatch.GraphicsDevice.Viewport.Width - offset, false);
+            }
+            else
+            {
+                // Transition from LS_Title to Title
+                DrawTransitionItems(positionsLSTitle, offset, false);
+                DrawTransitionItems(positionsTitle, -_spriteBatch.GraphicsDevice.Viewport.Width + offset, true);
+            }
+        }
+
+
+        private void DrawTransitionItems(Dictionary<string, Vector2> positions, float offset, bool isTitle)
+        {
+            foreach (var kvp in positions)
+            {
+                Texture2D texture = null;
+
+                if (Enum.TryParse(kvp.Key, out Choice choice) && _gameStateManager.Textures.TryGetValue(choice, out var choiceTexture))
+                {
+                    texture = choiceTexture;
+                }
+                else if (Enum.TryParse(kvp.Key, out LS_Choice lsChoice) && _gameStateManager.LSTextures.TryGetValue(lsChoice, out var lsChoiceTexture))
+                {
+                    texture = lsChoiceTexture;
+                }
+                else if (kvp.Key == "Title" && isTitle)
+                {
+                    texture = _gameStateManager.TitleTexture;
+                }
+                else if (kvp.Key == "LSTitle" && !isTitle)
+                {
+                    texture = _gameStateManager.LSTitleTexture;
+                }
+
+                if (texture != null)
+                {
+                    var position = kvp.Value;
+                    position.X += offset;
+                    _spriteBatch.Draw(texture, position, null, Color.White, 0f, new Vector2(texture.Width / 2, texture.Height / 2), _gameStateManager.NormalScale, SpriteEffects.None, 0f);
+                }
+            }
+        }
+
+
+
 
         private void DrawAchievementsScreen()
         {
