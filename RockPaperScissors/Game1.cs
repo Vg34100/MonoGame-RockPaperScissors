@@ -24,7 +24,7 @@ namespace RockPaperScissors
         {
             _gameStateManager = new GameStateManager();
             _gameLogic = new GameLogic(_gameStateManager);
-            _inputHandler = new InputHandler(_gameStateManager, _gameLogic);
+            _inputHandler = new InputHandler(_gameStateManager, _gameLogic, this);
             base.Initialize();
         }
 
@@ -41,11 +41,12 @@ namespace RockPaperScissors
 
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-                Exit();
+            // if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            //   Exit();
 
-            _inputHandler.Update(Mouse.GetState(), Keyboard.GetState());
+            _inputHandler.Update(Mouse.GetState(), Keyboard.GetState(), gameTime);
             _gameLogic.Update(gameTime);
+            _gameStateManager.AchievementManager.Update(gameTime); // Update the achievement manager
 
             base.Update(gameTime);
         }
@@ -56,6 +57,7 @@ namespace RockPaperScissors
 
             _spriteBatch.Begin();
             _renderer.Draw(gameTime);
+            _gameStateManager.AchievementManager.Draw(_spriteBatch); // Draw the achievement notifications
             _spriteBatch.End();
 
             base.Draw(gameTime);

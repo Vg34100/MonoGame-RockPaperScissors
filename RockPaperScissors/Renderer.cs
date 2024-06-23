@@ -1,6 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
+using System.Reflection.Metadata;
 
 namespace RockPaperScissors
 {
@@ -40,6 +42,96 @@ namespace RockPaperScissors
             else if (_gameStateManager.CurrentState == GameState.LS_Result)
             {
                 DrawLSResultScreen();
+            }
+            else if (_gameStateManager.CurrentState == GameState.Achievements)
+            {
+                DrawAchievementsScreen();
+            }
+
+            DrawResetMessage(gameTime); // Draw the reset message if needed
+
+        }
+
+        private void DrawResetMessage(GameTime gameTime)
+        {
+            if (_gameStateManager.ShowResetMessage)
+            {
+                Vector2 messagePosition = new Vector2(_spriteBatch.GraphicsDevice.Viewport.Width / 2, 1.9f * _spriteBatch.GraphicsDevice.Viewport.Height / 2);
+                string resetMessage = "Save data has been reset!";
+                Vector2 textSize = _gameStateManager.Font.MeasureString(resetMessage);
+                _spriteBatch.DrawString(_gameStateManager.Font, resetMessage, messagePosition - textSize / 2, Color.Black);
+                _gameStateManager.UpdateResetMessageTimer(gameTime); // Update the timer
+            }
+        }
+
+        private void DrawAchievementsScreen()
+        {
+            var achievements = _gameStateManager.AchievementManager.GetAchievements();
+            int startIndex = _gameStateManager.CurrentAchievementPage * _gameStateManager.AchievementsPerPage;
+            int endIndex = Math.Min(startIndex + _gameStateManager.AchievementsPerPage, achievements.Count);
+
+            for (int i = startIndex; i < endIndex; i++)
+            {
+                var achievement = achievements[i];
+                int row = (i - startIndex) / 4;
+                int col = (i - startIndex) % 4;
+                Vector2 position = new Vector2(100 + col * 200, 100 + row * 200);
+
+                // Vector2 textSize = _gameStateManager.Font.MeasureString("Press ENTER to Start...");
+                // _spriteBatch.DrawString(_gameStateManager.Font, "Press ENTER to Start...", _gameStateManager.StartButtonPosition - textSize / 2, Color.Black);
+
+                // _spriteBatch.Draw(computerTexture, computerPosition, null, Color.Gray, 0f, new Vector2(computerTexture.Width / 2, computerTexture.Height / 2), _gameStateManager.NormalScale, SpriteEffects.None, 0f);
+
+                if (achievement.IsUnlocked)
+                {
+                    _spriteBatch.Draw(achievement.Icon, position, null, Color.White, 0f, new Vector2(achievement.Icon.Width/2, achievement.Icon.Height/2), _gameStateManager.NormalScale, SpriteEffects.None, 0f);
+                }
+                else if (!achievement.IsUnlocked)
+                {
+                    _spriteBatch.Draw(_gameStateManager.UnknownTexture, position, null, Color.White, 0f, new Vector2(_gameStateManager.UnknownTexture.Width / 2, _gameStateManager.UnknownTexture.Height / 2), _gameStateManager.NormalScale, SpriteEffects.None, 0f);
+
+                }
+
+                if (!achievement.IsHidden || achievement.IsUnlocked)
+                {
+                    _spriteBatch.DrawString(_gameStateManager.Font, achievement.Name, (position + new Vector2(0, 50)) - _gameStateManager.Font.MeasureString(achievement.Name) / 2, Color.Black);
+                }
+                else if (achievement.IsHidden) 
+                {
+                    _spriteBatch.DrawString(_gameStateManager.Font, "???", (position + new Vector2(0,50)) - _gameStateManager.Font.MeasureString("???") / 2, Color.Black);
+
+                }
+
+                if (achievement.IsUnlocked)
+                {
+                    _spriteBatch.DrawString(_gameStateManager.Font, achievement.Description, (position + new Vector2(0, 70)) - _gameStateManager.Font.MeasureString(achievement.Description) / 2, Color.Black);
+                }
+
+            }
+
+            // Draw navigation buttons if needed
+            DrawNavigationButtons();
+
+            DrawExitButton();
+
+        }
+
+        private void DrawNavigationButtons()
+        {
+            int totalPages = _gameStateManager.TotalAchievementPages();
+            if (totalPages > 1)
+            {
+                if (_gameStateManager.CurrentAchievementPage > 0)
+                {
+                    // Draw left navigation button
+                    _spriteBatch.Draw(_gameStateManager.PrevButtonTexture, _gameStateManager.PrevButtonPosition, Color.White);
+                }
+
+                if (_gameStateManager.CurrentAchievementPage < totalPages - 1)
+                {
+                    // Draw right navigation button
+                    _spriteBatch.Draw(_gameStateManager.NextButtonTexture, _gameStateManager.NextButtonPosition, Color.White);
+                }
             }
         }
 
@@ -219,6 +311,8 @@ namespace RockPaperScissors
             string xpText = $"XP: {_gameStateManager.XP}/{_gameStateManager.XPNeeded}";
             string winStreakText = $"Win Streak: {_gameStateManager.WinStreak}";
 
+
+
             Vector2 levelPosition = new Vector2(10, 10);
             Vector2 xpPosition = new Vector2(10, 40);
             Vector2 winStreakPosition = new Vector2(10, 70);
@@ -226,6 +320,7 @@ namespace RockPaperScissors
             _spriteBatch.DrawString(_gameStateManager.Font, levelText, levelPosition, Color.Black);
             _spriteBatch.DrawString(_gameStateManager.Font, xpText, xpPosition, Color.Black);
             _spriteBatch.DrawString(_gameStateManager.Font, winStreakText, winStreakPosition, Color.Black);
+
         }
     }
 }

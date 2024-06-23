@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -9,6 +10,10 @@ namespace RockPaperScissors
 {
     public class GameStateManager
     {
+
+        public AchievementManager AchievementManager { get; private set; }
+
+
         public GameState CurrentState { get; set; } = GameState.Title;
         public Choice PlayerChoice { get; set; } = Choice.None;
         public Choice ComputerChoice { get; set; } = Choice.None;
@@ -36,6 +41,8 @@ namespace RockPaperScissors
         public float NormalScale { get; set; } = 3f;
         public float ButtonScale { get; set; } = 1.5f;
 
+        public Texture2D UnknownTexture { get; private set; }
+
         public Texture2D RockTexture { get; private set; }
         public Texture2D PaperTexture { get; private set; }
         public Texture2D ScissorsTexture { get; private set; }
@@ -50,6 +57,20 @@ namespace RockPaperScissors
         public SpriteFont Font { get; private set; }
 
         public Texture2D ExitButtonTexture { get; private set; }
+
+        public SoundEffect PlaySound {  get; private set; }
+        public SoundEffect ExitSound { get; private set; }
+
+        public SoundEffect ChangeScreenSound { get; private set; }
+        public SoundEffect LoseSound { get; private set; }
+        public SoundEffect WinSound { get; private set; }
+        public SoundEffect NextModeSound { get; private set; }
+        public SoundEffect[] SelectSounds { get; private set; } // Add this line
+
+
+
+
+
         public Vector2 ExitButtonPosition { get; set; }
         public Rectangle ExitButtonRectangle { get; set; }
 
@@ -58,7 +79,15 @@ namespace RockPaperScissors
         public int XP { get; set; } = 0;
         public int XPNeeded => Level * 100; // XP needed to level up
         public int WinStreak { get; set; } = 0;
+        public int OverallWins { get; set; } = 0;
+        public int OverallLoses { get; set; } = 0;
+        public int OverallTies { get; set; } = 0;
 
+        public Dictionary<Choice, int> WinsWith { get; private set; }
+        public Dictionary<LS_Choice, int> LSWinsWith { get; private set; }
+
+        public int CurrentAchievementPage { get; set; } = 0;
+        public int AchievementsPerPage { get; private set; } = 8;
 
 
         public Texture2D NextButtonTexture { get; private set; }
@@ -68,6 +97,29 @@ namespace RockPaperScissors
         public Rectangle NextButtonRectangle { get; set; }
         public Rectangle PrevButtonRectangle { get; set; }
 
+        public GameStateManager()
+        {
+            InitializeDictionaries();
+        }
+
+        private void InitializeDictionaries()
+        {
+            WinsWith = new Dictionary<Choice, int>
+            {
+                { Choice.Rock, 0 },
+                { Choice.Paper, 0 },
+                { Choice.Scissors, 0 }
+            };
+
+            LSWinsWith = new Dictionary<LS_Choice, int>
+            {
+                { LS_Choice.Rock, 0 },
+                { LS_Choice.Paper, 0 },
+                { LS_Choice.Scissors, 0 },
+                { LS_Choice.Lizard, 0 },
+                { LS_Choice.Spock, 0 }
+            };
+        }
 
         public void LoadContent(ContentManager content, GraphicsDevice graphicsDevice)
         {
@@ -79,6 +131,7 @@ namespace RockPaperScissors
             TitleTexture = content.Load<Texture2D>("RPS-logo");
             LSTitleTexture = content.Load<Texture2D>("RPSLS-logo");
 
+            UnknownTexture = content.Load<Texture2D>("unknown");
 
             StartButtonTexture = content.Load<Texture2D>("startButton");
             ExitButtonTexture = content.Load<Texture2D>("startButton"); // Load the exit button texture
@@ -93,6 +146,20 @@ namespace RockPaperScissors
 
             NextButtonPosition = new Vector2(windowWidth - NextButtonTexture.Width / 2 - 10, windowHeight / 2);
             PrevButtonPosition = new Vector2(PrevButtonTexture.Width / 2 + 10, windowHeight / 2);
+
+
+
+            PlaySound = content.Load<SoundEffect>("play");
+            ExitSound = content.Load<SoundEffect>("exit");
+            ChangeScreenSound = content.Load<SoundEffect>("change_screen");
+            LoseSound = content.Load<SoundEffect>("lose");
+            WinSound = content.Load<SoundEffect>("win");
+            NextModeSound = content.Load<SoundEffect>("next_mode");
+            // Load the select sounds
+            SelectSounds = new SoundEffect[3];
+            SelectSounds[0] = content.Load<SoundEffect>("select1");
+            SelectSounds[1] = content.Load<SoundEffect>("select2");
+            SelectSounds[2] = content.Load<SoundEffect>("select3");
 
 
             Positions = new Dictionary<GameState, Dictionary<string, Vector2>>()
@@ -115,6 +182,14 @@ namespace RockPaperScissors
                     }
                 },
                 {
+                    GameState.Result, new Dictionary<string, Vector2>()
+                    {
+                        { "Rock", new Vector2(5 * windowWidth / 16, windowHeight / 3) },
+                        { "Paper", new Vector2(windowWidth / 2, windowHeight / 3) },
+                        { "Scissors", new Vector2(11 * windowWidth / 16, windowHeight / 3) }
+                    }
+                },
+                {
                     GameState.LS_Title, new Dictionary<string, Vector2>()
                     {
                         { "Rock", new Vector2(10.5f * windowWidth / 16, windowHeight / 4.7f) },
@@ -128,11 +203,11 @@ namespace RockPaperScissors
                 {
                     GameState.LS_Playing, new Dictionary<string, Vector2>()
                     {
-                        { "Rock", new Vector2(4 * windowWidth / 16, windowHeight / 3) },
-                        { "Paper", new Vector2(7 * windowWidth / 16, windowHeight / 3) },
-                        { "Scissors", new Vector2(9 * windowWidth / 16, windowHeight / 3) },
-                        { "Lizard", new Vector2(11 * windowWidth / 16, windowHeight / 3) },
-                        { "Spock", new Vector2(13 * windowWidth / 16, windowHeight / 3) }
+                        { "Rock", new Vector2(7f * windowWidth / 32, windowHeight / 3) },
+                        { "Paper", new Vector2(11.5f * windowWidth / 32, windowHeight / 3) },
+                        { "Scissors", new Vector2(16f * windowWidth / 32, windowHeight / 3) },
+                        { "Lizard", new Vector2(20.5f * windowWidth / 32, windowHeight / 3) },
+                        { "Spock", new Vector2(25f * windowWidth / 32, windowHeight / 3) }
                     }
                 }
             };
@@ -157,9 +232,32 @@ namespace RockPaperScissors
             ExitButtonPosition = new Vector2(windowWidth - ExitButtonTexture.Width / 2 - 10, windowHeight - ExitButtonTexture.Height / 2 - 10); // Position it at the bottom right corner with some padding
 
 
+
+            AchievementManager = new AchievementManager(
+                content.Load<SpriteFont>("File"), // Load the font
+                content.Load<SoundEffect>("achievement_unlock"), // Load the sound effect
+                content.Load<Texture2D>("unlockBackground"), // Load the unlock background texture
+                this
+            );
+
+            // Example achievements
+            AchievementManager.AddAchievement(new Achievement("First Win", "Win your first game.", content.Load<Texture2D>("firstWinIcon"), 20));
+            AchievementManager.AddAchievement(new Achievement("Win Streak", "Get a win streak of 5.", content.Load<Texture2D>("winStreakIcon"), 50));
+            AchievementManager.AddAchievement(new Achievement("Unlucky...", "Lost 20 times...", content.Load<Texture2D>("winStreakIcon"), 30));
+            AchievementManager.AddAchievement(new Achievement("Rock Builder", "Get a 5 wins using Rock", content.Load<Texture2D>("rock"), 20));
+            AchievementManager.AddAchievement(new Achievement("Paper Fanatic", "Get a 5 wins using Paper", content.Load<Texture2D>("paper"), 20));
+            AchievementManager.AddAchievement(new Achievement("Scissor Crazy", "Get a 5 wins using Scissor", content.Load<Texture2D>("scissors"), 20));
+            AchievementManager.AddAchievement(new Achievement("Secret Achievement", "You found a secret!", content.Load<Texture2D>("secretIcon"), 100, true));
+            AchievementManager.AddAchievement(new Achievement("Lizard and Spock?", "Win your first Lizard Spock game.", content.Load<Texture2D>("firstWinIcon"), 20, true));
+            AchievementManager.AddAchievement(new Achievement("Lizard Luck", "Get a 5 wins using Lizard", content.Load<Texture2D>("lizard"), 30, true));
+            AchievementManager.AddAchievement(new Achievement("Spocked!?", "Get a 5 wins using Spock", content.Load<Texture2D>("spock"), 30, true));
+
+
+
             // Load saved data
             LoadGameData();
         }
+
 
         public void SaveGameData()
         {
@@ -167,8 +265,22 @@ namespace RockPaperScissors
             {
                 Level = this.Level,
                 XP = this.XP,
-                WinStreak = this.WinStreak
+                WinStreak = this.WinStreak,
+                OverallWins = this.OverallWins,
+                OverallLoses = this.OverallLoses,
+                OverallTies = this.OverallTies,
+                UnlockedAchievements = new List<string>(),
+                WinsWith = new Dictionary<Choice, int>(this.WinsWith),
+                LSWinsWith = new Dictionary<LS_Choice, int>(this.LSWinsWith)
             };
+
+            foreach (var achievement in AchievementManager.GetAchievements())
+            {
+                if (achievement.IsUnlocked)
+                {
+                    data.UnlockedAchievements.Add(achievement.Name);
+                }
+            }
 
             string json = System.Text.Json.JsonSerializer.Serialize(data);
             File.WriteAllText("savegame.json", json);
@@ -184,14 +296,106 @@ namespace RockPaperScissors
                 this.Level = data.Level;
                 this.XP = data.XP;
                 this.WinStreak = data.WinStreak;
+                this.OverallWins = data.OverallWins;
+                this.OverallLoses = data.OverallLoses;
+                this.OverallTies = data.OverallTies;
+                this.WinsWith = new Dictionary<Choice, int>(data.WinsWith);
+                this.LSWinsWith = new Dictionary<LS_Choice, int>(data.LSWinsWith);
+
+                foreach (var achievementName in data.UnlockedAchievements)
+                {
+                    AchievementManager.UnlockAchievementSilently(achievementName); // Unlock achievements without triggering notification
+                }
             }
         }
+
+        // Reset message properties
+        public bool ShowResetMessage { get; private set; } = false;
+        public double ResetMessageTimer { get; private set; } = 0;
+        private const double ResetMessageDuration = 3.0; // 3 seconds
+
+        // Other methods...
+
+        public void ResetSaveData()
+        {
+            if (File.Exists("savegame.json"))
+            {
+                File.Delete("savegame.json");
+            }
+
+            // Reset in-game variables
+            this.Level = 1;
+            this.XP = 0;
+            this.WinStreak = 0;
+            this.OverallWins = 0;
+            this.OverallLoses = 0;
+            this.OverallTies = 0;
+            InitializeDictionaries();
+            AchievementManager.ResetAchievements();
+
+
+
+            // Set the reset message timer and flag
+            ShowResetMessage = true;
+            ResetMessageTimer = ResetMessageDuration;
+
+            // Optionally, save the reset data
+            SaveGameData();
+        }
+
+        public void UpdateResetMessageTimer(GameTime gameTime)
+        {
+            if (ShowResetMessage)
+            {
+                ResetMessageTimer -= gameTime.ElapsedGameTime.TotalSeconds;
+                if (ResetMessageTimer <= 0)
+                {
+                    ShowResetMessage = false;
+                }
+            }
+        }
+
 
         private class SaveData
         {
             public int Level { get; set; }
             public int XP { get; set; }
             public int WinStreak { get; set; }
+            public int OverallWins { get; set; }
+            public int OverallLoses { get; set; }
+            public int OverallTies { get; set; }
+            public List<string> UnlockedAchievements { get; set; } = new List<string>();
+            public Dictionary<Choice, int> WinsWith { get; set; } = new Dictionary<Choice, int>();
+            public Dictionary<LS_Choice, int> LSWinsWith { get; set; } = new Dictionary<LS_Choice, int>();
+
+        }
+
+        public void IncrementWinCount(Choice choice)
+        {
+            WinsWith[choice]++;
+        }
+
+        public void IncrementLSWinCount(LS_Choice choice)
+        {
+            if (LSWinsWith.ContainsKey(choice))
+            {
+                LSWinsWith[choice]++;
+            }
+        }
+
+        public int TotalAchievementPages()
+        {
+            return (int)Math.Ceiling((double)AchievementManager.GetAchievements().Count / AchievementsPerPage);
+        }
+
+        public void GainXP(int amount)
+        {
+            XP += amount;
+            if (XP >= XPNeeded)
+            {
+                XP -= XPNeeded;
+                Level++;
+            }
         }
 
     }
