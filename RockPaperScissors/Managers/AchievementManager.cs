@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 
-namespace RockPaperScissors
+namespace RockPaperScissors.Managers
 {
     public class AchievementManager
     {

@@ -1,7 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using RockPaperScissors.Managers;
+using RockPaperScissors.Screens;
 using System;
+using System.Collections.Generic;
+
 
 namespace RockPaperScissors
 {
@@ -10,6 +14,7 @@ namespace RockPaperScissors
         private GameStateManager _gameStateManager;
         private MouseState _previousMouseState;
         private KeyboardState _previousKeyboardState;
+        private SettingsScreen _settingsScreen;
 
         private GameLogic _gameLogic;
         private Game _game; // Add a field for the Game instance
@@ -20,14 +25,37 @@ namespace RockPaperScissors
 
         private HoverItem _previousHoverItem = HoverItem.None;
 
+        private TitleScreen _titleScreen;
+        private PlayingScreen _playingScreen;
+        private ResultScreen _resultScreen;
+        // Lizard Spock GameMode
+        private LS_TitleScreen _ls_titleScreen;
+        private LS_PlayingScreen _ls_playingScreen;
+        private LS_ResultScreen _ls_resultScreen;
+        
+        // Misc
+        private AchievementScreen _achievementScreen;
 
-        public InputHandler(GameStateManager gameStateManager, GameLogic gameLogic, Game game)
+
+        public InputHandler(GameStateManager gameStateManager, GameLogic gameLogic, SettingsScreen settingsScreen, Game game)
         {
             _gameStateManager = gameStateManager;
             _gameLogic = gameLogic;
+            _settingsScreen = settingsScreen;
             _game = game; // Initialize the Game instance
             _cooldownTimer = 0;
             _random = new Random(); // Initialize the random generator
+            _titleScreen = new TitleScreen(this, _gameStateManager);
+            _playingScreen = new PlayingScreen(this, _gameStateManager);
+            _resultScreen = new ResultScreen(this, _gameStateManager, _gameLogic);
+
+            // Lizard Spock GameMode
+            _ls_titleScreen = new LS_TitleScreen(this, _gameStateManager);
+            _ls_playingScreen = new LS_PlayingScreen(this, _gameStateManager);
+            _ls_resultScreen = new LS_ResultScreen(this, _gameStateManager, _gameLogic);
+
+            // Misc Screen
+            _achievementScreen = new AchievementScreen(this, _gameStateManager);
 
         }
 
@@ -39,101 +67,44 @@ namespace RockPaperScissors
             {
                 _gameStateManager.ResetSaveData();
             }
-
-            if (_gameStateManager.CurrentState == GameState.Title)
+            if (currentKeyboardState.IsKeyDown(Keys.LeftControl) && currentKeyboardState.IsKeyDown(Keys.LeftShift) && currentKeyboardState.IsKeyDown(Keys.T))
             {
-                if (currentKeyboardState.IsKeyDown(Keys.LeftControl) && currentKeyboardState.IsKeyDown(Keys.LeftShift) && currentKeyboardState.IsKeyDown(Keys.L))
-                {
-                    _gameStateManager.NextModeSound.Play();
-                    _gameStateManager.IsTransitioning = true;
-                    // _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
-                }
-                if (currentKeyboardState.IsKeyDown(Keys.Right) && _gameStateManager.Level >= 2)
-                {
-                    _gameStateManager.NextModeSound.Play();
-                    _gameStateManager.IsTransitioning = true;
-                    // _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
-                }
-                if (currentKeyboardState.IsKeyDown(Keys.Enter))
-                {
-                    _gameStateManager.PlaySound.Play();
-                    _gameStateManager.CurrentState = GameState.Playing;
-                }
-                if (currentKeyboardState.IsKeyDown(Keys.T))
-                {
-                    _gameStateManager.ChangeScreenSound.Play();
-                    _gameStateManager.CurrentState = GameState.Achievements;
-                }
-                if (Keyboard.GetState().IsKeyDown(Keys.Escape) && _cooldownTimer <= 0)
-                {
-                    _game.Exit();
-                }
-                UpdateTitleScreen(currentMouseState);
+                _gameStateManager.CurrentState = GameState.Settings;
             }
-            else if (_gameStateManager.CurrentState == GameState.Playing)
-            {
-                UpdatePlayingScreen(currentMouseState, currentKeyboardState);
-                CheckForExitButtonClick(currentMouseState, GameState.Title, currentKeyboardState);
-            }
-            else if (_gameStateManager.CurrentState == GameState.Result)
-            {
-                UpdateResultScreen(currentMouseState, currentKeyboardState);
-                CheckForExitButtonClick(currentMouseState, GameState.Title, currentKeyboardState);
 
-            }
-            else if (_gameStateManager.CurrentState == GameState.LS_Title)
+           var handleInputActions = new Dictionary<GameState, Action>
             {
-                if (currentKeyboardState.IsKeyDown(Keys.LeftControl) && currentKeyboardState.IsKeyDown(Keys.LeftShift) && currentKeyboardState.IsKeyDown(Keys.S))
-                {
-                    _gameStateManager.NextModeSound.Play();
-                    _gameStateManager.IsTransitioning = true;
-
-                    // _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
+                { GameState.Title, () => _titleScreen.HandleInput(currentKeyboardState, currentMouseState, _previousMouseState) },
+                { GameState.Playing, () => _playingScreen.HandleInput(currentKeyboardState, currentMouseState, _previousMouseState) },
+                { GameState.Result, () => _resultScreen.HandleInput(currentKeyboardState, currentMouseState, _previousMouseState) },
+                { GameState.LS_Title, () => _ls_titleScreen.HandleInput(currentKeyboardState, currentMouseState, _previousMouseState) },
+                { GameState.LS_Playing, () => _ls_playingScreen.HandleInput(currentKeyboardState, currentMouseState, _previousMouseState) },
+                { GameState.LS_Result, () => _ls_resultScreen.HandleInput(currentKeyboardState, currentMouseState, _previousMouseState) },
+                { GameState.Achievements, () => _achievementScreen.HandleInput(currentKeyboardState, _previousKeyboardState, currentMouseState, _previousMouseState) },
+                { GameState.Settings, () => 
+                    {
+                        _settingsScreen.Update(currentMouseState, _previousMouseState);
+                        CheckForExitButtonClick(currentMouseState, GameState.Title, currentKeyboardState);
+                    }
                 }
-                if (currentKeyboardState.IsKeyDown(Keys.Left))
-                {
-                    _gameStateManager.NextModeSound.Play();
-                    _gameStateManager.IsTransitioning = true;
+            };
 
-                    // _gameStateManager.CurrentState = _gameStateManager.CurrentState == GameState.Title ? GameState.LS_Title : GameState.Title;
-                }
-                if (currentKeyboardState.IsKeyDown(Keys.Enter))
-                {
-                    _gameStateManager.PlaySound.Play();
-                    _gameStateManager.CurrentState = GameState.LS_Playing;
-
-                }
-                UpdateLSTitleScreen(currentMouseState);
-            }
-            else if (_gameStateManager.CurrentState == GameState.LS_Playing)
+            if (handleInputActions.TryGetValue(_gameStateManager.CurrentState, out var handleInputAction))
             {
-                UpdateLSPlayingScreen(currentMouseState, currentKeyboardState);
-                CheckForExitButtonClick(currentMouseState, GameState.LS_Title, currentKeyboardState);
-
-            }
-            else if (_gameStateManager.CurrentState == GameState.LS_Result)
-            {
-                UpdateLSResultScreen(currentMouseState, currentKeyboardState);
-                CheckForExitButtonClick(currentMouseState, GameState.LS_Title, currentKeyboardState);
-
-            }
-            else if (_gameStateManager.CurrentState == GameState.Achievements)
-            {
-                if (currentKeyboardState.IsKeyDown(Keys.Right) && !_previousKeyboardState.IsKeyDown(Keys.Right))
-                {
-                    _gameStateManager.CurrentAchievementPage = (_gameStateManager.CurrentAchievementPage + 1) % _gameStateManager.TotalAchievementPages();
-                }
-                else if (currentKeyboardState.IsKeyDown(Keys.Left) && !_previousKeyboardState.IsKeyDown(Keys.Left))
-                {
-                    _gameStateManager.CurrentAchievementPage = (_gameStateManager.CurrentAchievementPage - 1 + _gameStateManager.TotalAchievementPages()) % _gameStateManager.TotalAchievementPages();
-                }
-                UpdateAchievementsScreen(currentMouseState, currentKeyboardState);
-                CheckForExitButtonClick(currentMouseState, GameState.Title, currentKeyboardState);
+                handleInputAction();
             }
             UpdateHoverSounds(currentMouseState);
 
             _previousMouseState = currentMouseState;
             _previousKeyboardState = currentKeyboardState;
+        }
+
+        public void ExitCondition()
+        {
+            if (Keyboard.GetState().IsKeyDown(Keys.Escape) && _cooldownTimer <= 0)
+            {
+                _game.Exit();
+            }
         }
 
         private void UpdateHoverSounds(MouseState currentMouseState)
@@ -178,27 +149,7 @@ namespace RockPaperScissors
         }
 
 
-        private void UpdateAchievementsScreen(MouseState currentMouseState, KeyboardState currentKeyboardState)
-        {
-            // Check for navigation through achievements
-            if (currentKeyboardState.IsKeyDown(Keys.Right))
-            {
-                // Move to next set of achievements
-            }
-
-            if (currentKeyboardState.IsKeyDown(Keys.Left))
-            {
-                // Move to previous set of achievements
-            }
-
-            // Check for exit to title screen
-            if (currentKeyboardState.IsKeyDown(Keys.Back))
-            {
-                _gameStateManager.CurrentState = GameState.Title;
-            }
-        }
-
-        private void CheckForExitButtonClick(MouseState currentMouseState, GameState state, KeyboardState currentKeyboardState)
+        public void CheckForExitButtonClick(MouseState currentMouseState, GameState state, KeyboardState currentKeyboardState)
         {
             if ((_gameStateManager.ExitButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
                 || (currentKeyboardState.IsKeyDown(Keys.Escape) && _cooldownTimer <= 0))
@@ -211,170 +162,7 @@ namespace RockPaperScissors
             }
         }
 
-        private void UpdateTitleScreen(MouseState currentMouseState)
-        {
-            var positions = _gameStateManager.Positions[GameState.Title];
-
-            // Update hover state for rock
-            _gameStateManager.IsHoveringRock = IsHovering(positions["Rock"], _gameStateManager.RockTexture, _gameStateManager.HoverScale);
-
-            // Update hover state for paper
-            _gameStateManager.IsHoveringPaper = IsHovering(positions["Paper"], _gameStateManager.PaperTexture, _gameStateManager.HoverScale);
-
-            // Update hover state for scissors
-            _gameStateManager.IsHoveringScissors = IsHovering(positions["Scissors"], _gameStateManager.ScissorsTexture, _gameStateManager.HoverScale);
-
-            // Check for click on start button
-            _gameStateManager.StartButtonRectangle = new Rectangle(
-                (int)(_gameStateManager.StartButtonPosition.X - _gameStateManager.StartButtonTexture.Width * _gameStateManager.ButtonScale / 2),
-                (int)(_gameStateManager.StartButtonPosition.Y - _gameStateManager.StartButtonTexture.Height * _gameStateManager.ButtonScale / 2),
-                (int)(_gameStateManager.StartButtonTexture.Width * _gameStateManager.ButtonScale),
-                (int)(_gameStateManager.StartButtonTexture.Height * _gameStateManager.ButtonScale)
-            );
-
-            if (_gameStateManager.StartButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
-            {
-                _gameStateManager.CurrentState = GameState.Playing;
-                _gameStateManager.PlaySound.Play();
-            }
-            if (_gameStateManager.Level >= 2)
-            {
-                CheckForNextButtonClick(currentMouseState);
-            }
-        }
-        private void UpdateLSTitleScreen(MouseState currentMouseState)
-        {
-            var positions = _gameStateManager.Positions[GameState.LS_Title];
-
-            // Update hover state for rock
-            _gameStateManager.IsHoveringRock = IsHovering(positions["Rock"], _gameStateManager.RockTexture, _gameStateManager.HoverScale);
-
-            // Update hover state for paper
-            _gameStateManager.IsHoveringPaper = IsHovering(positions["Paper"], _gameStateManager.PaperTexture, _gameStateManager.HoverScale);
-
-            // Update hover state for scissors
-            _gameStateManager.IsHoveringScissors = IsHovering(positions["Scissors"], _gameStateManager.ScissorsTexture, _gameStateManager.HoverScale);
-
-            _gameStateManager.IsHoveringLizard = IsHovering(positions["Lizard"], _gameStateManager.LizardTexture, _gameStateManager.HoverScale);
-            _gameStateManager.IsHoveringSpock = IsHovering(positions["Spock"], _gameStateManager.SpockTexture, _gameStateManager.HoverScale);
-
-
-            // Check for click on start button
-            _gameStateManager.StartButtonRectangle = new Rectangle(
-                (int)(_gameStateManager.StartButtonPosition.X - _gameStateManager.StartButtonTexture.Width * _gameStateManager.ButtonScale / 2),
-                (int)(_gameStateManager.StartButtonPosition.Y - _gameStateManager.StartButtonTexture.Height * _gameStateManager.ButtonScale / 2),
-                (int)(_gameStateManager.StartButtonTexture.Width * _gameStateManager.ButtonScale),
-                (int)(_gameStateManager.StartButtonTexture.Height * _gameStateManager.ButtonScale)
-            );
-
-            if (_gameStateManager.StartButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
-            {
-                _gameStateManager.PlaySound.Play();
-                _gameStateManager.CurrentState = GameState.LS_Playing;
-            }
-            if (_gameStateManager.Level >= 2)
-            {
-                CheckForPrevButtonClick(currentMouseState);
-            }
-        }
-
-        private void UpdatePlayingScreen(MouseState currentMouseState, KeyboardState currentKeyboardState)
-        {
-            var positions = _gameStateManager.Positions[GameState.Playing];
-
-            // Update hover state for rock
-            _gameStateManager.IsHoveringRock = IsHovering(positions["Rock"], _gameStateManager.RockTexture, _gameStateManager.HoverScale);
-
-            // Update hover state for paper
-            _gameStateManager.IsHoveringPaper = IsHovering(positions["Paper"], _gameStateManager.PaperTexture, _gameStateManager.HoverScale);
-
-            // Update hover state for scissors
-            _gameStateManager.IsHoveringScissors = IsHovering(positions["Scissors"], _gameStateManager.ScissorsTexture, _gameStateManager.HoverScale);
-
-            // Check for player's choice
-            if ((_gameStateManager.IsHoveringRock && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released) || currentKeyboardState.IsKeyDown(Keys.D1))
-            {
-                _gameStateManager.PlayerChoice = Choice.Rock;
-                _gameStateManager.CurrentState = GameState.Result;
-            }
-            else if ((_gameStateManager.IsHoveringPaper && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released) || currentKeyboardState.IsKeyDown(Keys.D2))
-            {
-                _gameStateManager.PlayerChoice = Choice.Paper;
-                _gameStateManager.CurrentState = GameState.Result;
-            }
-            else if ((_gameStateManager.IsHoveringScissors && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released) || currentKeyboardState.IsKeyDown(Keys.D3))
-            {
-                _gameStateManager.PlayerChoice = Choice.Scissors;
-                _gameStateManager.CurrentState = GameState.Result;
-            }
-        }
-
-        private void UpdateLSPlayingScreen(MouseState currentMouseState, KeyboardState currentKeyboardState)
-        {
-            var positions = _gameStateManager.Positions[GameState.LS_Playing];
-
-            // Update hover state for rock
-            _gameStateManager.IsHoveringRock = IsHovering(positions["Rock"], _gameStateManager.RockTexture, _gameStateManager.HoverScale);
-
-            // Update hover state for paper
-            _gameStateManager.IsHoveringPaper = IsHovering(positions["Paper"], _gameStateManager.PaperTexture, _gameStateManager.HoverScale);
-
-            // Update hover state for scissors
-            _gameStateManager.IsHoveringScissors = IsHovering(positions["Scissors"], _gameStateManager.ScissorsTexture, _gameStateManager.HoverScale);
-
-            _gameStateManager.IsHoveringLizard = IsHovering(positions["Lizard"], _gameStateManager.LizardTexture, _gameStateManager.HoverScale);
-            _gameStateManager.IsHoveringSpock = IsHovering(positions["Spock"], _gameStateManager.SpockTexture, _gameStateManager.HoverScale);
-
-
-
-            // Check for player's choice
-            if ((_gameStateManager.IsHoveringRock && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released) || currentKeyboardState.IsKeyDown(Keys.D1))
-            {
-                _gameStateManager.PlayerLSChoice = LS_Choice.Rock;
-                _gameStateManager.CurrentState = GameState.LS_Result;
-            }
-            else if ((_gameStateManager.IsHoveringPaper && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released) || currentKeyboardState.IsKeyDown(Keys.D2))
-            {
-                _gameStateManager.PlayerLSChoice = LS_Choice.Paper;
-                _gameStateManager.CurrentState = GameState.LS_Result;
-            }
-            else if ((_gameStateManager.IsHoveringScissors && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released) || currentKeyboardState.IsKeyDown(Keys.D3))
-            {
-                _gameStateManager.PlayerLSChoice = LS_Choice.Scissors;
-                _gameStateManager.CurrentState = GameState.LS_Result;
-            }
-            else if ((_gameStateManager.IsHoveringLizard && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released) || currentKeyboardState.IsKeyDown(Keys.D4))
-            {
-                _gameStateManager.PlayerLSChoice = LS_Choice.Lizard;
-                _gameStateManager.CurrentState = GameState.LS_Result;
-            }
-            else if ((_gameStateManager.IsHoveringSpock && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released) || currentKeyboardState.IsKeyDown(Keys.D5))
-            {
-                _gameStateManager.PlayerLSChoice = LS_Choice.Spock;
-                _gameStateManager.CurrentState = GameState.LS_Result;
-            }
-        }
-
-        private void UpdateResultScreen(MouseState currentMouseState, KeyboardState currentKeyboardState)
-        {
-            // Check for click on start button to restart the game
-            if ((_gameStateManager.StartButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released) || currentKeyboardState.IsKeyDown(Keys.Enter))
-            {
-                _gameLogic.ResetRound();
-                _gameStateManager.CurrentState = GameState.Playing;
-            }
-        }
-        private void UpdateLSResultScreen(MouseState currentMouseState, KeyboardState currentKeyboardState)
-        {
-            // Check for click on start button to restart the game
-            if ((_gameStateManager.StartButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released) || currentKeyboardState.IsKeyDown(Keys.Enter))
-            {
-                _gameLogic.ResetRound();
-                _gameStateManager.CurrentState = GameState.LS_Playing;
-            }
-        }
-
-        private void CheckForNextButtonClick(MouseState currentMouseState)
+        public void CheckForNextButtonClick(MouseState currentMouseState)
         {
             if (_gameStateManager.NextButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
@@ -385,7 +173,7 @@ namespace RockPaperScissors
             }
         }
 
-        private void CheckForPrevButtonClick(MouseState currentMouseState)
+        public void CheckForPrevButtonClick(MouseState currentMouseState)
         {
             if (_gameStateManager.PrevButtonRectangle.Contains(currentMouseState.Position) && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
@@ -396,7 +184,7 @@ namespace RockPaperScissors
             }
         }
 
-        private bool IsHovering(Vector2 position, Texture2D texture, float scale)
+        public bool IsHovering(Vector2 position, Texture2D texture, float scale)
         {
             Rectangle rectangle = new Rectangle(
                 (int)(position.X - texture.Width * scale / 2),

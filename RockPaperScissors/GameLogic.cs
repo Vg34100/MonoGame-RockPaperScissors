@@ -1,4 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
+using Microsoft.Xna.Framework.Media;
+using RockPaperScissors.Managers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,194 +12,162 @@ namespace RockPaperScissors
     {
         private GameStateManager _gameStateManager;
         private Random _random;
-        private bool _resultCalculated;
+        private bool _resultCalculated = false;
 
-        private Dictionary<Choice, List<Choice>> _winConditions;
-        private Dictionary<LS_Choice, List<LS_Choice>> _lsWinConditions;
+        private readonly Dictionary<Choice, List<Choice>> _winConditions = new Dictionary<Choice, List<Choice>>
+        {
+            { Choice.Rock, new List<Choice> { Choice.Scissors } },
+            { Choice.Paper, new List<Choice> { Choice.Rock } },
+            { Choice.Scissors, new List<Choice> { Choice.Paper } }
+        };
+
+        private readonly Dictionary<LS_Choice, List<LS_Choice>> _lsWinConditions = new Dictionary<LS_Choice, List<LS_Choice>>
+        {
+            { LS_Choice.Rock, new List<LS_Choice> { LS_Choice.Scissors, LS_Choice.Lizard } },
+            { LS_Choice.Paper, new List<LS_Choice> { LS_Choice.Rock, LS_Choice.Spock } },
+            { LS_Choice.Scissors, new List<LS_Choice> { LS_Choice.Paper, LS_Choice.Lizard } },
+            { LS_Choice.Lizard, new List<LS_Choice> { LS_Choice.Spock, LS_Choice.Paper } },
+            { LS_Choice.Spock, new List<LS_Choice> { LS_Choice.Scissors, LS_Choice.Rock } }
+        };
 
         public GameLogic(GameStateManager gameStateManager)
         {
             _gameStateManager = gameStateManager;
             _random = new Random();
-            _resultCalculated = false;
-
-            InitializeWinConditions();
-            InitializeLSWinConditions();
-        }
-
-        private void InitializeWinConditions()
-        {
-            _winConditions = new Dictionary<Choice, List<Choice>>
-            {
-                { Choice.Rock, new List<Choice> { Choice.Scissors } },
-                { Choice.Paper, new List<Choice> { Choice.Rock } },
-                { Choice.Scissors, new List<Choice> { Choice.Paper } }
-            };
-        }
-
-        private void InitializeLSWinConditions()
-        {
-            _lsWinConditions = new Dictionary<LS_Choice, List<LS_Choice>>
-            {
-                { LS_Choice.Rock, new List<LS_Choice> { LS_Choice.Scissors, LS_Choice.Lizard } },
-                { LS_Choice.Paper, new List<LS_Choice> { LS_Choice.Rock, LS_Choice.Spock } },
-                { LS_Choice.Scissors, new List<LS_Choice> { LS_Choice.Paper, LS_Choice.Lizard } },
-                { LS_Choice.Lizard, new List<LS_Choice> { LS_Choice.Spock, LS_Choice.Paper } },
-                { LS_Choice.Spock, new List<LS_Choice> { LS_Choice.Scissors, LS_Choice.Rock } }
-            };
         }
 
         public void Update(GameTime gameTime)
         {
-            if (_gameStateManager.CurrentState == GameState.Result && !_resultCalculated)
+            if (!_resultCalculated)
             {
-                MakeComputerChoice();
-                DetermineResult();
-                _resultCalculated = true;
-            }
-            if (_gameStateManager.CurrentState == GameState.LS_Result && !_resultCalculated)
-            {
-                MakeComputerLSChoice();
-                DetermineLSResult();
-                _resultCalculated = true;
+                if (_gameStateManager.CurrentState == GameState.Result)
+                {
+                    MakeComputerChoice<Choice>();
+                    DetermineResult(_gameStateManager.PlayerChoice, _gameStateManager.ComputerChoice, _winConditions);
+                    _resultCalculated = true;
+                }
+                else if (_gameStateManager.CurrentState == GameState.LS_Result)
+                {
+                    MakeComputerChoice<LS_Choice>();
+                    DetermineResult(_gameStateManager.PlayerLSChoice, _gameStateManager.ComputerLSChoice, _lsWinConditions);
+                    _resultCalculated = true;
+
+                }
             }
         }
 
-        private void MakeComputerChoice()
+        private void MakeComputerChoice<T>()
         {
-            int choice = _random.Next(1, 4); // 1 to 3
-            _gameStateManager.ComputerChoice = (Choice)choice;
+            if (typeof(T) == typeof(Choice))
+                _gameStateManager.ComputerChoice = (Choice)_random.Next(1, 4);
+            if (typeof(T) == typeof(LS_Choice))
+                _gameStateManager.ComputerLSChoice = (LS_Choice)_random.Next(1, 6);
+
         }
 
-        private void DetermineResult()
+        private void DetermineResult<T>(T playerChoice, T computerChoice, Dictionary<T, List<T>> winConditions)
         {
-            if (_gameStateManager.PlayerChoice == _gameStateManager.ComputerChoice)
+
+            if (object.Equals(playerChoice, computerChoice))
             {
-                _gameStateManager.ResultMessage = "It's a tie!";
-                _gameStateManager.LoseSound.Play();
-                _gameStateManager.OverallTies++;
-                // _gameStateManager.WinStreak = 0;
+                HandleGameResult(GameResult.Tie, "It's a tie!", _gameStateManager.LoseSound, 0, playerChoice);
             }
-            else if (_winConditions[_gameStateManager.PlayerChoice].Contains(_gameStateManager.ComputerChoice))
+            if (winConditions[playerChoice].Contains(computerChoice))
             {
-                _gameStateManager.ResultMessage = "You win!";
-                _gameStateManager.WinSound.Play();
-                _gameStateManager.WinStreak++;
-                _gameStateManager.OverallWins++;
-                _gameStateManager.IncrementWinCount(_gameStateManager.PlayerChoice);
-                _gameStateManager.GainXP(10 * _gameStateManager.WinStreak); // Gain 10 XP for a win
-                _gameStateManager.AchievementManager.UnlockAchievement("First Win");
+                HandleGameResult(GameResult.Win, "You win!", _gameStateManager.WinSound, 10 * _gameStateManager.WinStreak, playerChoice);
             }
             else
             {
-                _gameStateManager.ResultMessage = "You lose!";
-                _gameStateManager.LoseSound.Play();
-                _gameStateManager.WinStreak = 0;
-                _gameStateManager.OverallLoses++;
+                HandleGameResult(GameResult.Lose, "You lose!", _gameStateManager.LoseSound, 0, playerChoice);
+
             }
-            AchievementCheck();
+            CheckAchievements();
             _gameStateManager.SaveGameData();
         }
 
-
-
+        private void HandleGameResult<T>(GameResult result, string message, SoundEffect sound, int xp, T choice)
+        {
+            _gameStateManager.ResultMessage = message;
+            sound.Play();
+            switch (result)
+            {
+                case GameResult.Win:
+                    _gameStateManager.WinStreak++;
+                    _gameStateManager.OverallWins++;
+                    if (choice is Choice)
+                    {
+                        _gameStateManager.IncrementWinCount((Choice)(object)choice);
+                        _gameStateManager.ModeWins[GameState.Playing]++;
+                    }
+                    else if (choice is LS_Choice)
+                    {
+                        _gameStateManager.IncrementLSWinCount((LS_Choice)(object)choice);
+                        _gameStateManager.ModeWins[GameState.LS_Playing]++;
+                    }
+                    break;
+                case GameResult.Tie:
+                    _gameStateManager.OverallTies++;
+                    break;
+                case GameResult.Lose:
+                    _gameStateManager.OverallLoses++;
+                    _gameStateManager.WinStreak = 0;
+                    break;
+            }
+            _gameStateManager.GainXP(xp);
+        }
 
         public void ResetRound()
         {
             _resultCalculated = false;
             _gameStateManager.PlayerChoice = Choice.None;
             _gameStateManager.ComputerChoice = Choice.None;
+            _gameStateManager.PlayerLSChoice = LS_Choice.None;
+            _gameStateManager.ComputerLSChoice = LS_Choice.None;
             _gameStateManager.ResultMessage = "";
         }
 
-        // Add method for Lizard-Spock mode
-        private void MakeComputerLSChoice()
+        // Check for achievements
+        private void CheckAchievements()
         {
-            int choice = _random.Next(1, 6); // 1 to 5 for LS mode
-            _gameStateManager.ComputerLSChoice = (LS_Choice)choice;
-        }
-
-
-        private void DetermineLSResult()
-        {
-            if (_gameStateManager.PlayerLSChoice == _gameStateManager.ComputerLSChoice)
+            if (_gameStateManager.ModeWins[GameState.Playing] >= 1)
             {
-                _gameStateManager.ResultMessage = "It's a tie!";
-                _gameStateManager.LoseSound.Play();
-                _gameStateManager.WinStreak = 0;
-                _gameStateManager.OverallTies++;
+                _gameStateManager.AchievementManager.UnlockAchievement("First Win");
             }
-            else if (_lsWinConditions[_gameStateManager.PlayerLSChoice].Contains(_gameStateManager.ComputerLSChoice))
+            if (_gameStateManager.ModeWins[GameState.LS_Playing] >= 1)
             {
-                _gameStateManager.ResultMessage = "You win!";
-                _gameStateManager.WinSound.Play();
-                _gameStateManager.WinStreak++;
-                _gameStateManager.IncrementLSWinCount(_gameStateManager.PlayerLSChoice);
-                _gameStateManager.GainXP(20 * _gameStateManager.WinStreak); // Gain 20 XP for a win
-                _gameStateManager.OverallWins++;
                 _gameStateManager.AchievementManager.UnlockAchievement("Lizard and Spock?");
-
             }
-            else
-            {
-                _gameStateManager.ResultMessage = "You lose!";
-                _gameStateManager.LoseSound.Play();
-                _gameStateManager.WinStreak = 0;
-                _gameStateManager.OverallLoses++;
 
-            }
-            AchievementCheck();
-            _gameStateManager.SaveGameData();
-
-        }
-        private void AchievementCheck()
-        {
-            _gameStateManager.WinsWith.TryGetValue(Choice.Rock, out int rockval2);
-            Console.WriteLine($"Computer choice: {rockval2}");
             if (_gameStateManager.WinStreak >= 5)
-            {
                 _gameStateManager.AchievementManager.UnlockAchievement("Win Streak");
-            }
+
             if (_gameStateManager.OverallLoses >= 20)
-            {
                 _gameStateManager.AchievementManager.UnlockAchievement("Unlucky...");
-            }
-            if (_gameStateManager.WinsWith.TryGetValue(Choice.Rock, out int rockval) && _gameStateManager.LSWinsWith.TryGetValue(LS_Choice.Rock, out int lsrockval))
-            {
-                if (rockval + lsrockval >= 5)
-                {
-                    _gameStateManager.AchievementManager.UnlockAchievement("Rock Builder");
-                }
-            }
-            if (_gameStateManager.WinsWith.TryGetValue(Choice.Paper, out int paperval) && _gameStateManager.LSWinsWith.TryGetValue(LS_Choice.Paper, out int lspaperval))
-            {
-                if (paperval + lspaperval >= 5)
-                {
-                    _gameStateManager.AchievementManager.UnlockAchievement("Paper Fanatic");
-                }
-            }
-            if (_gameStateManager.WinsWith.TryGetValue(Choice.Scissors, out int scissorval) && _gameStateManager.LSWinsWith.TryGetValue(LS_Choice.Scissors, out int lsscissorval))
-            {
-                if (scissorval + lsscissorval >= 5)
-                {
-                    _gameStateManager.AchievementManager.UnlockAchievement("Scissor Crazy");
-                }
-            }
-            if (_gameStateManager.LSWinsWith.TryGetValue(LS_Choice.Lizard, out int lslizardval))
-            {
-                if (lslizardval >= 5)
-                {
-                    _gameStateManager.AchievementManager.UnlockAchievement("Lizard Luck");
-                }
-            }
-            if (_gameStateManager.LSWinsWith.TryGetValue(LS_Choice.Spock, out int lsspockval))
-            {
-                if (lsspockval >= 5)
-                {
-                    _gameStateManager.AchievementManager.UnlockAchievement("Spocked!?");
-                }
-            }
+
+            CheckSpecificAchievement(Choice.Rock, "Rock Builder", 5);
+            CheckSpecificAchievement(Choice.Paper, "Paper Fanatic", 5);
+            CheckSpecificAchievement(Choice.Scissors, "Scissor Crazy", 5);
+            CheckSpecificAchievement(LS_Choice.Lizard, "Lizard Luck", 5);
+            CheckSpecificAchievement(LS_Choice.Spock, "Spocked!?", 5);
         }
+
+        // Check for specific achievements
+        private void CheckSpecificAchievement<T>(T choice, string achievement, int count) where T : Enum
+        {
+            // Calculate the number of wins for the given choice.
+            // If the choice is of type Choice, sum the wins from both WinsWith and LSWinsWith dictionaries.
+            // If the choice is of type LS_Choice, get the wins from the LSWinsWith dictionary.
+
+            int wins = choice is Choice
+                ? _gameStateManager.WinsWith[(Choice)(object)choice] + _gameStateManager.LSWinsWith[(LS_Choice)(object)choice]
+                : _gameStateManager.LSWinsWith[(LS_Choice)(object)choice];
+
+            // If the total wins for the given choice are greater than or equal to the specified count,
+            // unlock the corresponding achievement.
+            if (wins >= count)
+                _gameStateManager.AchievementManager.UnlockAchievement(achievement);
+        }
+
     }
 
 

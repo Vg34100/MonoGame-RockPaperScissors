@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using RockPaperScissors.Managers;
 
 namespace RockPaperScissors
 {
@@ -12,6 +13,8 @@ namespace RockPaperScissors
         private InputHandler _inputHandler;
         private Renderer _renderer;
         private GameLogic _gameLogic;
+        private SettingsScreen _settingsScreen;
+
 
         public Game1()
         {
@@ -24,7 +27,8 @@ namespace RockPaperScissors
         {
             _gameStateManager = new GameStateManager();
             _gameLogic = new GameLogic(_gameStateManager);
-            _inputHandler = new InputHandler(_gameStateManager, _gameLogic, this);
+            _settingsScreen = new SettingsScreen(_gameStateManager);
+            _inputHandler = new InputHandler(_gameStateManager, _gameLogic, _settingsScreen, this);
             base.Initialize();
         }
 
@@ -34,9 +38,10 @@ namespace RockPaperScissors
 
             // Load resources into the GameStateManager
             _gameStateManager.LoadContent(Content, GraphicsDevice);
+            _settingsScreen.LoadContent();
 
             // Initialize other components
-            _renderer = new Renderer(_spriteBatch, _gameStateManager);
+            _renderer = new Renderer(_spriteBatch, _gameStateManager, _settingsScreen);
         }
 
         protected override void Update(GameTime gameTime)

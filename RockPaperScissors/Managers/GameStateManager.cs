@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace RockPaperScissors
+namespace RockPaperScissors.Managers
 {
     public class GameStateManager
     {
@@ -52,13 +52,14 @@ namespace RockPaperScissors
         public Texture2D TitleTexture { get; private set; }
         public Texture2D LSTitleTexture { get; private set; }
 
-
+        public Texture2D KnobTexture { get; private set; }
+        public Texture2D SliderTexture { get; private set; }
         public Texture2D StartButtonTexture { get; private set; }
         public SpriteFont Font { get; private set; }
 
         public Texture2D ExitButtonTexture { get; private set; }
 
-        public SoundEffect PlaySound {  get; private set; }
+        public SoundEffect PlaySound { get; private set; }
         public SoundEffect ExitSound { get; private set; }
 
         public SoundEffect ChangeScreenSound { get; private set; }
@@ -66,6 +67,8 @@ namespace RockPaperScissors
         public SoundEffect WinSound { get; private set; }
         public SoundEffect NextModeSound { get; private set; }
         public SoundEffect[] SelectSounds { get; private set; } // Add this line
+        public float SoundEffectVolume { get; set; } = 1.0f; // Default volume (1.0 is full volume)
+
 
 
 
@@ -80,8 +83,10 @@ namespace RockPaperScissors
         public int XPNeeded => Level * 100; // XP needed to level up
         public int WinStreak { get; set; } = 0;
         public int OverallWins { get; set; } = 0;
+        public Dictionary<GameState, int> ModeWins { get; private set; }
         public int OverallLoses { get; set; } = 0;
         public int OverallTies { get; set; } = 0;
+
 
         public Dictionary<Choice, int> WinsWith { get; private set; }
         public Dictionary<LS_Choice, int> LSWinsWith { get; private set; }
@@ -127,10 +132,17 @@ namespace RockPaperScissors
                 { LS_Choice.Lizard, 0 },
                 { LS_Choice.Spock, 0 }
             };
+
+            ModeWins = new Dictionary<GameState, int>
+            {
+                { GameState.Playing, 0 },
+                { GameState.LS_Playing, 0 },
+            };
         }
 
         public void LoadContent(ContentManager content, GraphicsDevice graphicsDevice)
         {
+            SoundEffect.MasterVolume = 0.8f;
             RockTexture = content.Load<Texture2D>("rock");
             PaperTexture = content.Load<Texture2D>("paper");
             ScissorsTexture = content.Load<Texture2D>("scissors");
@@ -146,6 +158,9 @@ namespace RockPaperScissors
 
             NextButtonTexture = content.Load<Texture2D>("nextButton");
             PrevButtonTexture = content.Load<Texture2D>("prevButton");
+
+            KnobTexture = content.Load<Texture2D>("rock");
+            SliderTexture = content.Load<Texture2D>("paper");
 
             Font = content.Load<SpriteFont>("File");
 
@@ -266,20 +281,27 @@ namespace RockPaperScissors
             LoadGameData();
         }
 
+        public void SetVolume(float volume)
+        {
+            SoundEffectVolume = MathHelper.Clamp(volume, 0.0f, 1.0f); // Ensure volume is between 0 and 1
+
+            SoundEffect.MasterVolume = SoundEffectVolume;
+        }
 
         public void SaveGameData()
         {
             var data = new SaveData
             {
-                Level = this.Level,
-                XP = this.XP,
-                WinStreak = this.WinStreak,
-                OverallWins = this.OverallWins,
-                OverallLoses = this.OverallLoses,
-                OverallTies = this.OverallTies,
+                Level = Level,
+                XP = XP,
+                WinStreak = WinStreak,
+                OverallWins = OverallWins,
+                OverallLoses = OverallLoses,
+                OverallTies = OverallTies,
                 UnlockedAchievements = new List<string>(),
-                WinsWith = new Dictionary<Choice, int>(this.WinsWith),
-                LSWinsWith = new Dictionary<LS_Choice, int>(this.LSWinsWith)
+                WinsWith = new Dictionary<Choice, int>(WinsWith),
+                LSWinsWith = new Dictionary<LS_Choice, int>(LSWinsWith),
+                ModeWins = new Dictionary<GameState, int>(ModeWins)
             };
 
             foreach (var achievement in AchievementManager.GetAchievements())
@@ -301,14 +323,15 @@ namespace RockPaperScissors
                 string json = File.ReadAllText("savegame.json");
                 var data = System.Text.Json.JsonSerializer.Deserialize<SaveData>(json);
 
-                this.Level = data.Level;
-                this.XP = data.XP;
-                this.WinStreak = data.WinStreak;
-                this.OverallWins = data.OverallWins;
-                this.OverallLoses = data.OverallLoses;
-                this.OverallTies = data.OverallTies;
-                this.WinsWith = new Dictionary<Choice, int>(data.WinsWith);
-                this.LSWinsWith = new Dictionary<LS_Choice, int>(data.LSWinsWith);
+                Level = data.Level;
+                XP = data.XP;
+                WinStreak = data.WinStreak;
+                OverallWins = data.OverallWins;
+                OverallLoses = data.OverallLoses;
+                OverallTies = data.OverallTies;
+                WinsWith = new Dictionary<Choice, int>(data.WinsWith);
+                LSWinsWith = new Dictionary<LS_Choice, int>(data.LSWinsWith);
+                ModeWins = new Dictionary<GameState, int>(data.ModeWins);
 
                 foreach (var achievementName in data.UnlockedAchievements)
                 {
@@ -332,12 +355,12 @@ namespace RockPaperScissors
             }
 
             // Reset in-game variables
-            this.Level = 1;
-            this.XP = 0;
-            this.WinStreak = 0;
-            this.OverallWins = 0;
-            this.OverallLoses = 0;
-            this.OverallTies = 0;
+            Level = 1;
+            XP = 0;
+            WinStreak = 0;
+            OverallWins = 0;
+            OverallLoses = 0;
+            OverallTies = 0;
             InitializeDictionaries();
             AchievementManager.ResetAchievements();
 
@@ -375,6 +398,7 @@ namespace RockPaperScissors
             public List<string> UnlockedAchievements { get; set; } = new List<string>();
             public Dictionary<Choice, int> WinsWith { get; set; } = new Dictionary<Choice, int>();
             public Dictionary<LS_Choice, int> LSWinsWith { get; set; } = new Dictionary<LS_Choice, int>();
+            public Dictionary<GameState, int> ModeWins { get; set; } = new Dictionary<GameState, int>();
 
         }
 
