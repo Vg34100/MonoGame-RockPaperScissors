@@ -60,7 +60,34 @@ namespace RockPaperScissors
                     { GameState.Result, () => _resultScreen.Render() },
                     { GameState.LS_Result, () => _ls_resultScreen.Render() },
                     { GameState.Achievements, () => _achievementScreen.Render() },
-                    { GameState.Settings, () => _settingsScreen.Draw(_spriteBatch) }
+                    { GameState.Settings, () => _settingsScreen.Draw(_spriteBatch) },
+                    { GameState.C_Playing, () =>  _gameStateManager.CharacterGameLogic.Draw(_spriteBatch)},
+                    { GameState.World, () =>
+                    {
+
+                            // Calculate depth based on Y position (higher Y means closer to the front)
+                                Vector2 cameraPosition = new Vector2(-_gameStateManager._translation.Translation.X, -_gameStateManager._translation.Translation.Y);
+
+                    float heroDepth = 1f - ((_gameStateManager._hero.Position.Y - cameraPosition.Y) /_gameStateManager._map.MapSize.Y);
+                    // Draw background layers
+                    _gameStateManager._map.DrawBackgroundLayers();
+
+                    // Draw hero
+                    _gameStateManager._hero.Draw(heroDepth);
+
+                    // Draw foreground layers
+                    _gameStateManager._map.DrawForegroundLayers();
+
+                    // Interactable Depth Calculation
+                    foreach (var interactable in _gameStateManager._interactableObjects)
+                    {
+                         float treeDepth = 1f - ((interactable.Position.Y - cameraPosition.Y) /_gameStateManager._map.MapSize.Y);
+                        interactable.Draw(treeDepth);
+                    }
+
+
+
+                    } }
                 };
 
                 if (renderActions.TryGetValue(_gameStateManager.CurrentState, out var renderAction))

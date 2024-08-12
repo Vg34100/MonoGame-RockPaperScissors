@@ -2,9 +2,12 @@
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using RockPaperScissors.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Reflection.Metadata;
 
 namespace RockPaperScissors.Managers
 {
@@ -12,7 +15,8 @@ namespace RockPaperScissors.Managers
     {
 
         public AchievementManager AchievementManager { get; private set; }
-
+        public int windowWidth { get; private set; }
+        public int windowHeight { get; private set; }
 
         public GameState CurrentState { get; set; } = GameState.Title;
         public Choice PlayerChoice { get; set; } = Choice.None;
@@ -110,9 +114,24 @@ namespace RockPaperScissors.Managers
 
 
 
+
+        public CharacterGameLogic CharacterGameLogic { get; private set; }
+
+        public List<Character> _characters;
+
+        public  Map _map;
+        public  Hero _hero;
+        public Matrix _translation;
+
+
+        public List<InteractableObject> _interactableObjects;
+
         public GameStateManager()
         {
             InitializeDictionaries();
+            CharacterGameLogic = new CharacterGameLogic(this);
+
+
         }
 
         private void InitializeDictionaries()
@@ -142,6 +161,27 @@ namespace RockPaperScissors.Managers
 
         public void LoadContent(ContentManager content, GraphicsDevice graphicsDevice)
         {
+
+            // Load the tileset texture
+            Texture2D tileset = content.Load<Texture2D>("tilemap_packed"); // Replace "tileset" with your actual tileset texture name
+
+            // Create a list of CSV file paths for each layer
+            List<string> csvFilePaths = new List<string>
+            {
+                Path.Combine("../../../Data", "testmap_Tile Layer 1.csv"),
+                Path.Combine("../../../Data", "testmap_Tile Layer 2.csv"),
+                Path.Combine("../../../Data", "testmap_Tile Layer 3.csv")
+            };
+
+            // Initialize the map with the tileset texture and the CSV file paths
+            _map = new Map(csvFilePaths, tileset, 16, 16, 4f);
+
+
+            // Initialize the hero after the map, since it depends on the map's properties
+            _hero = new Hero(content.Load<Texture2D>("hero"), new Vector2(Globals.WindowSize.X / 2, Globals.WindowSize.Y / 2), _map);
+            _hero.SetBounds(_map.MapSize, _map.TileSize);
+
+
             SoundEffect.MasterVolume = 0.8f;
             RockTexture = content.Load<Texture2D>("rock");
             PaperTexture = content.Load<Texture2D>("paper");
@@ -166,11 +206,77 @@ namespace RockPaperScissors.Managers
 
             int windowWidth = graphicsDevice.Viewport.Width;
             int windowHeight = graphicsDevice.Viewport.Height;
+            this.windowHeight = windowHeight;
+            this.windowWidth = windowWidth;
 
             NextButtonPosition = new Vector2(windowWidth - NextButtonTexture.Width / 2 - 10, windowHeight / 2);
             PrevButtonPosition = new Vector2(PrevButtonTexture.Width / 2 + 10, windowHeight / 2);
 
 
+
+            // player stuff
+            _characters = new List<Character>();
+
+            Texture2D alicePortrait = content.Load<Texture2D>("alice");
+            Character alice = new Character("Alice", alicePortrait);
+
+            // Add some dialogue
+            alice.AddRandomDialogue("I really like rocks");
+            alice.AddOrderedDialogue("Welcome to Rock Paper Scissors!");
+            alice.AddConditionalDialogue("Lose", "Come on rock, you got this.");
+            alice.AddConditionalDialogue("Win", "Let's go!");
+
+
+            alice.AddConditionalDialogue("GameWin", "Wow, tough competition!");
+            alice.AddConditionalDialogue("GameLose", "Noooooo!");
+
+
+            // Adjust probabilities if needed
+            alice.AdjustProbabilities(Choice.Rock, 0.9f);
+            _characters.Add(alice);
+
+
+
+
+
+            Texture2D elliotPortrait = content.Load<Texture2D>("elliot");
+            Character elliot = new Character("Elliot", elliotPortrait);
+
+            // Add some dialogue
+            elliot.AddRandomDialogue("Paper NEVER loses.");
+            elliot.AddRandomDialogue("Who even choses Scissors...");
+            elliot.AddOrderedDialogue("Hey there sucker, think you can beat me?");
+            elliot.AddOrderedDialogue("Bet you I'll win");
+
+            elliot.AddConditionalDialogue("Tie", "It's a tie!");
+            elliot.AddConditionalDialogue("Lose", "*whispers bad things*");
+            elliot.AddConditionalDialogue("Win", "This is too easy.");
+
+            elliot.AddConditionalDialogue("GameWin", "Haha, I knew I'd win.");
+            elliot.AddConditionalDialogue("GameLose", "Wow, I can't believe I lost...");
+
+            // Adjust probabilities if needed
+            elliot.AdjustProbabilities(Choice.Paper, 0.8f);
+
+            _characters.Add(elliot);
+
+            _interactableObjects = new List<InteractableObject>();
+
+            // Example buttons
+            Texture2D aliceHero = content.Load<Texture2D>("alice_hero");
+            _interactableObjects.Add(new InteractableObject(aliceHero, new Vector2(100, 200), () => {
+                CurrentState = GameState.C_Playing;
+                CharacterGameLogic.StartNewGame(alice, GameState.World);
+                Debug.WriteLine("Button 1 pressed!");
+            }));
+
+            Texture2D elliotHero = content.Load<Texture2D>("elliot_hero");
+            _interactableObjects.Add(new InteractableObject(elliotHero, new Vector2(300, 1300), () => {
+                // Another action
+                CurrentState = GameState.C_Playing;
+                CharacterGameLogic.StartNewGame(elliot, GameState.World);
+                Debug.WriteLine("Button 2 pressed!");
+            }));
 
             PlaySound = content.Load<SoundEffect>("play");
             ExitSound = content.Load<SoundEffect>("exit");
@@ -190,10 +296,10 @@ namespace RockPaperScissors.Managers
                 {
                     GameState.Title, new Dictionary<string, Vector2>()
                     {
-                        { "Rock", new Vector2(10.5f * windowWidth / 16, windowHeight / 4.7f) },
-                        { "Paper", new Vector2(5.1f * windowWidth / 16, 3 * windowHeight / 8) },
-                        { "Scissors", new Vector2(12.5f * windowWidth / 16,  4 * windowHeight / 8) },
-                        { "Title", new Vector2(windowWidth / 2, windowHeight / 2) }
+                        { "Rock", new Vector2(5.05f * windowWidth / 16, 0.25f * windowHeight) },
+                        { "Paper", new Vector2(11.7f * windowWidth / 16, 0.4375f * windowHeight) },
+                        { "Scissors", new Vector2(3.75f * windowWidth / 16,  0.6125f * windowHeight) },
+                        { "Title", new Vector2(windowWidth / 2, 0.9f * windowHeight / 2) }
                     }
                 },
                 {
@@ -232,7 +338,22 @@ namespace RockPaperScissors.Managers
                         { "Lizard", new Vector2(20.5f * windowWidth / 32, windowHeight / 3) },
                         { "Spock", new Vector2(25f * windowWidth / 32, windowHeight / 3) }
                     }
+                },
+                {
+                    GameState.C_Playing, new Dictionary<string, Vector2>()
+                    {
+                        { "PlayerDirection", new Vector2(windowWidth / 2, windowHeight / 10) },
+                        { "PlayerChoice", new Vector2(windowWidth / 2, 1.5f * windowHeight / 5) },
+                        { "CharacterChoice", new Vector2(windowWidth / 2, 3 * windowHeight / 5) },
+                        { "Rock", new Vector2(5 * windowWidth / 16, windowHeight / 3) },
+                        { "Paper", new Vector2(windowWidth / 2, windowHeight / 3) },
+                        { "Scissors", new Vector2(11 * windowWidth / 16, windowHeight / 3) },
+                        { "PlayerPortrait", new Vector2(windowWidth /8, 7 * windowHeight / 8) },
+                        { "CharacterPortrait", new Vector2(8 * windowWidth /8, 8 * windowHeight / 8) },
+                        { "CharacterDialogue", new Vector2(4 * windowWidth /8, 7 * windowHeight / 8) },
+                    }
                 }
+
             };
 
             Textures = new Dictionary<Choice, Texture2D>

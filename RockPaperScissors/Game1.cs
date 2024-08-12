@@ -25,6 +25,13 @@ namespace RockPaperScissors
 
         protected override void Initialize()
         {
+            Globals.WindowSize = new(1024, 768);
+            _graphics.PreferredBackBufferWidth = Globals.WindowSize.X;
+            _graphics.PreferredBackBufferHeight = Globals.WindowSize.Y;
+            _graphics.ApplyChanges();
+
+            Globals.Content = Content;
+
             _gameStateManager = new GameStateManager();
             _gameLogic = new GameLogic(_gameStateManager);
             _settingsScreen = new SettingsScreen(_gameStateManager);
@@ -35,6 +42,8 @@ namespace RockPaperScissors
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
+            Globals.SpriteBatch = _spriteBatch;
+            Globals.GameStateManager = _gameStateManager;
 
             // Load resources into the GameStateManager
             _gameStateManager.LoadContent(Content, GraphicsDevice);
@@ -63,16 +72,27 @@ namespace RockPaperScissors
                 _gameLogic.Update(gameTime);
                 _gameStateManager.AchievementManager.Update(gameTime);
             }
-
+            Globals.Update(gameTime);
             base.Update(gameTime);
         }
 
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            Color myCustomColor = new Color(133, 104, 94); // Example: purple color
 
-            _spriteBatch.Begin();
+            GraphicsDevice.Clear(myCustomColor);
+
+            if (_gameStateManager.CurrentState == GameState.World)
+            {
+                _spriteBatch.Begin(SpriteSortMode.BackToFront, transformMatrix: _gameStateManager._translation);
+
+            }
+            else
+            {
+                _spriteBatch.Begin();
+
+            }
             _renderer.Draw(gameTime);
             _gameStateManager.AchievementManager.Draw(_spriteBatch); // Draw the achievement notifications
             _spriteBatch.End();

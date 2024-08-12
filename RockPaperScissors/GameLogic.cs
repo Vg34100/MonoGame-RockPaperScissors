@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
+using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using RockPaperScissors.Managers;
 using System;
@@ -36,6 +37,15 @@ namespace RockPaperScissors
             _random = new Random();
         }
 
+        private void CalculateTranslation()
+        {
+            var dx = (Globals.WindowSize.X / 2) - _gameStateManager._hero.Position.X;
+            dx = MathHelper.Clamp(dx, -_gameStateManager._map.MapSize.X + Globals.WindowSize.X + (_gameStateManager._map.TileSize.X / 2), _gameStateManager._map.TileSize.X / 2);
+            var dy = (Globals.WindowSize.Y / 2) - _gameStateManager._hero.Position.Y;
+            dy = MathHelper.Clamp(dy, -_gameStateManager._map.MapSize.Y + Globals.WindowSize.Y + (_gameStateManager._map.TileSize.Y / 2), _gameStateManager._map.TileSize.Y / 2);
+            _gameStateManager._translation = Matrix.CreateTranslation(dx, dy, 0f);
+        }
+
         public void Update(GameTime gameTime)
         {
             if (!_resultCalculated)
@@ -53,6 +63,18 @@ namespace RockPaperScissors
                     _resultCalculated = true;
 
                 }
+            }
+            if (_gameStateManager.CurrentState == GameState.C_Playing)
+            {
+                _gameStateManager.CharacterGameLogic.Update(gameTime);
+            }
+            if (_gameStateManager.CurrentState == GameState.World)
+            {
+                PawnInputManager.Update(_gameStateManager);
+                _gameStateManager._hero.Update();
+
+
+                CalculateTranslation();
             }
         }
 

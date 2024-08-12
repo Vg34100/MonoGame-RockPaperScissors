@@ -57,6 +57,7 @@ namespace RockPaperScissors
             // Misc Screen
             _achievementScreen = new AchievementScreen(this, _gameStateManager);
 
+
         }
 
         public void Update(MouseState currentMouseState, KeyboardState currentKeyboardState, GameTime gameTime)
@@ -71,8 +72,19 @@ namespace RockPaperScissors
             {
                 _gameStateManager.CurrentState = GameState.Settings;
             }
+            if (currentKeyboardState.IsKeyDown(Keys.LeftControl) && currentKeyboardState.IsKeyDown(Keys.LeftShift) && currentKeyboardState.IsKeyDown(Keys.C) && _gameStateManager.CurrentState != GameState.C_Playing)
+            {
+                _gameStateManager.CurrentState = GameState.C_Playing;
+                _gameStateManager.CharacterGameLogic.StartNewGame();
 
-           var handleInputActions = new Dictionary<GameState, Action>
+            }
+            if (currentKeyboardState.IsKeyDown(Keys.LeftControl) && currentKeyboardState.IsKeyDown(Keys.LeftShift) && currentKeyboardState.IsKeyDown(Keys.W) && _gameStateManager.CurrentState != GameState.World)
+            {
+                _gameStateManager.CurrentState = GameState.World;
+                CheckForExitButtonClick(currentMouseState, GameState.Title, currentKeyboardState);
+            }
+
+            var handleInputActions = new Dictionary<GameState, Action>
             {
                 { GameState.Title, () => _titleScreen.HandleInput(currentKeyboardState, currentMouseState, _previousMouseState) },
                 { GameState.Playing, () => _playingScreen.HandleInput(currentKeyboardState, currentMouseState, _previousMouseState) },
@@ -86,7 +98,8 @@ namespace RockPaperScissors
                         _settingsScreen.Update(currentMouseState, _previousMouseState);
                         CheckForExitButtonClick(currentMouseState, GameState.Title, currentKeyboardState);
                     }
-                }
+                },
+                { GameState.C_Playing, () => HandleCPlayingInput(currentMouseState, currentKeyboardState) }
             };
 
             if (handleInputActions.TryGetValue(_gameStateManager.CurrentState, out var handleInputAction))
@@ -99,6 +112,65 @@ namespace RockPaperScissors
             _previousKeyboardState = currentKeyboardState;
         }
 
+
+        private void HandleCPlayingInput(MouseState currentMouseState, KeyboardState currentKeyboardState)
+        {
+            if (_gameStateManager.CharacterGameLogic.IsGameActive)
+            {
+                var positions = _gameStateManager.Positions[GameState.C_Playing];
+                foreach (Choice choice in new[] { Choice.Rock, Choice.Paper, Choice.Scissors })
+                {
+                    if (IsChoiceMade(choice, currentMouseState, _previousMouseState, currentKeyboardState, positions))
+                    {
+                        _gameStateManager.CharacterGameLogic.HandlePlayerChoice(choice);
+                        break;
+                    }
+                }
+            }
+            else if (IsPlayAgainClicked(currentMouseState))
+            {
+                _gameStateManager.CharacterGameLogic.StartNewGame();
+            }
+
+            CheckForExitButtonClick(currentMouseState, GameState.Title, currentKeyboardState);
+        }
+
+        private bool IsChoiceMade(Choice choice, MouseState currentMouseState, MouseState previousMouseState, KeyboardState currentKeyboardState, Dictionary<string, Vector2> positions)
+        {
+            if (_gameStateManager.Textures.TryGetValue(choice, out Texture2D texture))
+            {
+                Vector2 position = positions[choice.ToString()];
+                float scale = IsHovering(position, texture, _gameStateManager.NormalScale)
+                    ? _gameStateManager.HoverScale
+                    : _gameStateManager.NormalScale;
+
+                Rectangle clickableArea = new Rectangle(
+                    (int)(position.X - texture.Width * scale / 2),
+                    (int)(position.Y - texture.Height * scale / 2),
+                    (int)(texture.Width * scale),
+                    (int)(texture.Height * scale)
+                );
+
+                bool isClicked = clickableArea.Contains(currentMouseState.Position) &&
+                                 currentMouseState.LeftButton == ButtonState.Pressed &&
+                                 previousMouseState.LeftButton == ButtonState.Released;
+
+                return isClicked ||
+                       (choice == Choice.Rock && currentKeyboardState.IsKeyDown(Keys.D1)) ||
+                       (choice == Choice.Paper && currentKeyboardState.IsKeyDown(Keys.D2)) ||
+                       (choice == Choice.Scissors && currentKeyboardState.IsKeyDown(Keys.D3));
+            }
+
+            return false;
+        }
+
+        private bool IsPlayAgainClicked(MouseState currentMouseState)
+        {
+            return _gameStateManager.StartButtonRectangle.Contains(currentMouseState.Position) &&
+                   currentMouseState.LeftButton == ButtonState.Pressed &&
+                   _previousMouseState.LeftButton == ButtonState.Released;
+        }
+
         public void ExitCondition()
         {
             if (Keyboard.GetState().IsKeyDown(Keys.Escape) && _cooldownTimer <= 0)
@@ -109,6 +181,10 @@ namespace RockPaperScissors
 
         private void UpdateHoverSounds(MouseState currentMouseState)
         {
+            if (!_game.IsActive)
+            {
+                return;
+            }
             HoverItem currentHoverItem = HoverItem.None;
 
             if (_gameStateManager.IsHoveringRock)
